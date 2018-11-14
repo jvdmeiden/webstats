@@ -1,0 +1,36 @@
+body {
+  background: #000;
+  color: #ddd;
+}
+label {
+    cursor: pointer;
+    display: block;
+    text-align: center;
+}
+
+.stroke {
+  fill: #111;
+  stroke: #777;
+  stroke-width: 1px;
+}
+.fill {
+  fill: #000;
+}
+.graticule {
+  fill: none;
+  stroke: #666;
+  stroke-width: .5px;
+  stroke-opacity: .5
+}
+.land {
+  fill: #111;
+}
+.boundary {
+  fill: none;
+  stroke: #bbb;
+  stroke-width: .5px;
+}
+.country {
+  cursor: pointer;
+}
+

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<!--Author: Jan van der Meiden                                            -->
+<!--Version: 20151001:00                                                  -->
+<!--Copyright (c) 2015 Jan van der Meiden.                                -->
+<!--Copying and distribution of this file, with or without modification,  -->
+<!--are permitted in any medium without royalty provided the copyright-   -->
+<!--notice and this notice are preserved.  This file is offered as-is,    -->
+<!--without any warranty.                                                 -->
+
+<head>
+  <title>Statistics on Internet</title>
+  <!--Get bootstrap (needs jquery..) and d3                               -->
+  <!--  (hm thats a lot of complexity...)                                 -->
+  <meta charset="utf-8">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-113123312-1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'UA-113123312-1');
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-geo-projection/0.2.9/d3.geo.projection.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.19/topojson.min.js"></script>
+  <!--Load custom css                                                     -->
+  <link rel="stylesheet" href="css/custom.css">
+</head>
+<body >
+<div class="container">
+  <h1>Internet Statistics</h1>
+  <p>This page is a graphical presentation of statistical data on internet users population.</p>
+  <div class="col-md-8" class="form">
+    <form role="form" name="selectForm" style="font-size: 14x">
+      <div class="chart_type">
+       <label class="radio-inline">
+         <input type="radio" name="optradio" id="inetPenetration" checked onchange="handleRadio(this.id)">Internet Penetration</label>
+       <label class="radio-inline">
+         <input type="radio" name="optradio" id="inetDensity" onchange="handleRadio(this.id)">Internet User Density</label>
+       <label class="radio-inline">
+         <input type="radio" name="optradio" id="popDensity" onchange="handleRadio(this.id)">Population Density</label>
+      </div>
+    </form><br/><br/>
+    <div>
+      <button onclick="sliderDown()" style="color:#111">&lt</button>	
+      <button onclick="sliderUp()" style="color:#111">&gt</button>	  
+      <input type="range" min="1988" max="2016" step="1" id="slider" value="2015" onchange="displaySliderValue()"/>
+      <span id="sliderVal" style="font-weight:bold;">Year: 2016</span><br/>
+    </div>
+  </div>
+  <div class="col-md-4"ass="data">
+    <table style="font-size: 12px">
+      <tr><td>Name:</td><td class="data_name"></td></tr> 
+      <tr><td>Size:</td><td class="data_size"></td></tr> 
+      <tr><td>Population:</td><td class="data_pop"></td></tr> 
+      <tr><td>Internet Users:</td><td class="data_users"></td></tr> 
+      <tr><td>Internet Penetration:</td><td class="data_pen"></td></tr> 
+    </table>
+  </div>
+  <div class="map">
+  </div>
+  <div class="bottom">
+    &copy; <a href="mailto:jvdmeiden@gmail.com">Jan van der Meiden</a> 2018 -- Based on: <a href="http://bost.ocks.org/mike/map/">Mike Bostocks tutorial on maps</a> -- Data source: <a href="http://databank.worldbank.org/data/reports.aspx?source=2&series=IT.NET.USER.ZS">World Bank statistics on Internet users</a> Source: <a href="https://github.com/jvdmeiden/webstat">webstat</a>
+  </div>
+</div>
+
+
+<script>
+var year=2014; 
+var metric="inetPenetration";
+
+function handleRadio(value){
+  metric=value;
+  updateMap();
+}
+
+function sliderUp() {
+    document.getElementById("slider").stepUp(1);
+    displaySliderValue();
+}
+
+function sliderDown() {
+    document.getElementById("slider").stepDown(1);
+    displaySliderValue();
+}
+
+function displaySliderValue()
+{
+  var value=document.getElementById("slider").value;
+  document.getElementById("sliderVal").innerHTML="Year: "+value;
+  year=value;
+  updateMap();
+}
+
+var width = 960,
+    height = 700;
+
+var penColor = d3.scale.linear()
+    .domain([0, 100])
+    .range(["#002", "#fff"]);
+
+var denColor = d3.scale.linear()
+    .domain([0, 600])
+    .range(["#003", "#fff"]);
+
+var projection = d3.geo.ginzburg9()
+    .scale(175)
+    .translate([width / 2, height / 2])
+    .precision(.1);
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var graticule = d3.geo.graticule();
+
+var svg = d3.select(".map").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var inet = {},
+    pop  = {},
+    area  = {},
+    i2a = {},
+    a2i = {};
+
+d3.json("data/internet.json", function(data) { inet=data; });
+d3.json("data/population.json", function(data) { pop=data; });
+d3.json("data/area.json", function(data) { area=data; });
+d3.json("data/id2alfa.json", function(data) { i2a=data; });
+d3.json("data/alfa2id.json", function(data) { a2i=data; });
+
+svg.append("defs").append("path")
+     .datum({type: "Sphere"})
+     .attr("id", "sphere")
+     .attr("d", path);
+
+svg.append("use")
+     .attr("class", "stroke")
+     .attr("xlink:href", "#sphere");
+
+svg.append("use")
+     .attr("class", "fill")
+     .attr("xlink:href", "#sphere");
+
+svg.append("path")
+     .datum(graticule)
+     .attr("class", "graticule")
+     .attr("d", path);
+
+d3.json("data/world-50m.json", function(error, world) {
+    if (error) throw error;
+
+svg.selectAll(".countries")
+   .data(topojson.feature(world, world.objects.countries).features)
+   .enter().append("path")
+   .attr("id", function(d) { return "country_" + d.id; })
+   .attr("class", "country")
+   .style("fill", function(d) { return getColor(d.id) } )
+   .attr("onmouseover", "tipOn(evt)")
+   .attr("onmouseout", "tipOff(evt)")
+   .attr("d", path);
+
+svg.insert("path", ".graticule")
+   .datum(topojson.feature(world, world.objects.land))
+   .attr("class", "land")
+   .attr("d", path);
+
+svg.insert("path", ".graticule")
+   .datum(topojson.mesh(world, world.objects.countries, function(a, b) { return a !== b; }))
+   .attr("class", "boundary")
+   .attr("d", path);
+});
+
+function getColor(d) {
+  if( d > 0 ) {
+    var alfa=i2a[d.toString()].alfa3;
+    if ( metric == "inetPenetration" ) {
+      if (inet[alfa] != null){ 
+        return(penColor(inet[alfa][year.toString()]));
+      } else {
+       return penColor(0);
+      }
+    } else if ( metric == "inetDensity" ) { 
+      if (inet[alfa] != null){ 
+        return(denColor((inet[alfa][year.toString()]/100)*pop[alfa][year.toString()]/area[alfa][year.toString()]));
+      } else {
+       return penColor(0);
+      }
+    } else if ( metric == "popDensity" ) { 
+      if (pop[alfa] != null && area[alfa]){ 
+        return(denColor(pop[alfa][year.toString()]/area[alfa][year.toString()]));
+      } else {
+       return denColor(0);
+      }
+      return "#000";
+    }
+  } else {
+    return "#000";
+  }
+}
+
+function updateMap(){
+  svg.selectAll(".country")
+    .style("fill", function(d) { return getColor(d.id) });
+  tipOff(null);
+}
+
+function tipOn(evt){
+    var id=evt.target.id.replace("country_","");
+    var alfa=i2a[id.toString()].alfa3;
+    if (inet[alfa] != null){
+      if (inet[alfa].name != null){
+        d3.select(".data_name").text(inet[alfa].name);
+        d3.select(".data_size").text(area[alfa][year.toString()]);
+        d3.select(".data_pop").text(pop[alfa][year.toString()]);
+        d3.select(".data_pen").text(inet[alfa][year.toString()].toFixed(2));
+        d3.select(".data_users").text((pop[alfa][year.toString()]*inet[alfa][year.toString()]/100).toFixed(0));
+      } else {
+        d3.select(".data_name").text("No Data");
+        d3.select(".data_size").text("");
+        d3.select(".data_name").text("");
+        d3.select(".data_pop").text("");
+        d3.select(".data_pen").text("");
+        d3.select(".data_users").text("");
+      }
+    }
+}
+
+function tipOff(evt){
+  d3.select(".data_name").text("World");
+  d3.select(".data_size").text(area["WLD"][year.toString()]);
+  d3.select(".data_pop").text(pop["WLD"][year.toString()]);
+  d3.select(".data_pen").text(inet["WLD"][year.toString()].toFixed(2));
+  d3.select(".data_users").text((pop["WLD"][year.toString()]*inet["WLD"][year.toString()]/100).toFixed(0));
+}
+
+updateMap()
+</script>
+</html>
